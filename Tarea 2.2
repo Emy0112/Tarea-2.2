@@ -1,297 +1,240 @@
-
-"""Tarea 2.2_Metodo de punto fijo_Métodos numéricos.ipynb
+# -*- coding: utf-8 -*-
+"""Tarea 3.3. Método de Jacobi_Métodos numéricos.ipynb
 
 **Ejercicio 1**
-"""
 
-import numpy as np
 import matplotlib.pyplot as plt
 
-# Definir la función g(x) para el método de punto fijo
-def g(x):
-    return (3*x-1)**(1/2)
+# Definir el sistema de ecuaciones del ejemplo
+A = np.array([[10, -1, 2, 0, 0],
+              [-1, 11, -1, 3, 0],
+              [2, -1, 10, -1, 0],
+              [0, 3, -1, 8, -2],
+              [0, 0, 2, -2, 10]])
 
-# Criterio de convergencia
-def g_prime(x):
-    return (3/2) * (3*x-1)**(-1/2)
+b = np.array([6, 25, -11, 15, -10])
 
-# Error absoluto
-def error_absoluto(x_new, x_old):
-    return abs(x_new - x_old)
+# Solución exacta para comparar errores
+# Se añade esta linea para determinar
+# una solución exacta para comparar errores
+sol_exacta = np.linalg.solve(A, b)
 
-# Error relativo
-def error_relativo(x_new, x_old):
-    return abs((x_new - x_old) / x_new)
 
-# Error cuadrático
-def error_cuadratico(x_new, x_old):
-    return (x_new - x_old)**2
+# Criterio de paro
+tolerancia = 1e-6
+max_iter = 100
 
-# Método de punto fijo
-def punto_fijo(x0, tol=1e-5, max_iter=100):
-    iteraciones = []
+# Implementación del método de Jacobi
+def jacobi(A, b, tol, max_iter):
+    n = len(A)
+    x = np.zeros(n)  # Aproximación inicial
     errores_abs = []
     errores_rel = []
     errores_cuad = []
 
-    x_old = x0
-    for i in range(max_iter):
-        x_new = g(x_old)
-        e_abs = error_absoluto(x_new, x_old)
-        e_rel = error_relativo(x_new, x_old)
-        e_cuad = error_cuadratico(x_new, x_old)
+    for k in range(max_iter):
+        x_new = np.zeros(n)
+        for i in range(n):
+            suma = sum(A[i, j] * x[j] for j in range(n) if j != i)
+            x_new[i] = (b[i] - suma) / A[i, i]
 
-        iteraciones.append((i+1, x_new, e_abs, e_rel, e_cuad))
-        errores_abs.append(e_abs)
-        errores_rel.append(e_rel)
-        errores_cuad.append(e_cuad)
+        # Calcular errores
+        error_abs = np.linalg.norm(x_new - sol_exacta, ord=1)
+        error_rel = np.linalg.norm(x_new - sol_exacta, ord=1) / np.linalg.norm(sol_exacta, ord=1)
+        error_cuad = np.linalg.norm(x_new - sol_exacta, ord=2)
 
-        if e_abs < tol:
+        errores_abs.append(error_abs)
+        errores_rel.append(error_rel)
+        errores_cuad.append(error_cuad)
+
+        # Imprimir errores de la iteración
+        print(f"Iteración {k+1}: Error absoluto = {error_abs:.6f}, Error relativo = {error_rel:.6f}, Error cuadrático = {error_cuad:.6f}")
+
+        # Criterio de convergencia
+        if np.linalg.norm(x_new - x, ord=np.inf) < tol:
             break
 
-        x_old = x_new
+        x = x_new
 
-    return iteraciones, errores_abs, errores_rel, errores_cuad
+    return x, errores_abs, errores_rel, errores_cuad, k+1
 
-# Parámetros iniciales
-x0 = 1.5
-iteraciones, errores_abs, errores_rel, errores_cuad = punto_fijo(x0)
+# Ejecutar el método de Jacobi
+sol_aprox, errores_abs, errores_rel, errores_cuad, iteraciones = jacobi(A, b, tolerancia, max_iter)
 
-# Imprimir tabla de iteraciones
-print("Iteración | x_n      | Error absoluto | Error relativo | Error cuadrático")
-print("-----------------------------------------------------------------------")
-for it in iteraciones:
-    print(f"{it[0]:9d} | {it[1]:.6f} | {it[2]:.6e} | {it[3]:.6e} | {it[4]:.6e}")
-
-# Graficar la convergencia
-x_vals = np.linspace(1, 4, 100)
-y_vals = g(x_vals)
-
-plt.figure(figsize=(8, 5))
-plt.plot(x_vals, y_vals, label=r"$g(x) = (3x-1)^{1/2}$", color="blue")
-plt.plot(x_vals, x_vals, linestyle="dashed", color="red", label="y = x")
-
-# Graficar iteraciones
-x_points = [it[1] for it in iteraciones]
-y_points = [g(x) for x in x_points]
-plt.scatter(x_points, y_points, color="black", zorder=3)
-plt.plot(x_points, y_points, linestyle="dotted", color="black", label="Iteraciones")
-
-plt.xlabel("x")
-plt.ylabel("g(x)")
-plt.legend()
-plt.grid(True)
-plt.title("Método de Punto Fijo")
-plt.savefig("punto_fijo_convergencia.png")
-plt.show()
-
-# Graficar errores
-plt.figure(figsize=(8, 5))
-plt.plot(range(1, len(errores_abs) + 1), errores_abs, marker="o", label="Error absoluto")
-plt.plot(range(1, len(errores_rel) + 1), errores_rel, marker="s", label="Error relativo")
-plt.plot(range(1, len(errores_cuad) + 1), errores_cuad, marker="^", label="Error cuadrático")
-
-plt.xlabel("Iteración")
+# Graficar los errores
+plt.figure(figsize=(8,6))
+plt.plot(range(1, iteraciones+1), errores_abs, label="Error absoluto", marker='o')
+plt.plot(range(1, iteraciones+1), errores_rel, label="Error relativo", marker='s')
+plt.plot(range(1, iteraciones+1), errores_cuad, label="Error cuadrático", marker='d')
+plt.xlabel("Iteraciones")
 plt.ylabel("Error")
 plt.yscale("log")
+plt.title("Convergencia de los errores en el método de Jacobi")
 plt.legend()
-plt.grid(True)
-plt.title("Evolución de los Errores")
-plt.savefig("errores_punto_fijo.png")
+plt.grid()
+plt.savefig("errores_jacobi.png")  # Guardar la figura en archivo PNG
 plt.show()
+
+# Mostrar la solución aproximada
+print(f"Solución aproximada: {sol_aprox}")
+print(f"Solución exacta: {sol_exacta}")
 
 """**Ejercicio 2**"""
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Definir la función g(x) para el método de punto fijo
-def g(x):
-    return np.log(4*x)
+# Definir el sistema de ecuaciones del ejemplo
+A = np.array([[8, 2, -1, 0, 0, 0],
+              [3, 15, -2, 1, 0, 0],
+              [0, -2, 12, 2, -1, 0],
+              [0, 1, -1, 9, -2, 1],
+              [0, 0, -2, 3, 14, 1],
+              [0, 0, 0, 1, -2, 10]])
 
-# Criterio de convergencia
-def g_prime(x):
-    return (1/x)
+b = np.array([10, 24, -18, 16, -9, 22])
 
-# Error absoluto
-def error_absoluto(x_new, x_old):
-    return abs(x_new - x_old)
+# Solución exacta para comparar errores
+# Se añade esta linea para determinar
+# una solución exacta para comparar errores
+sol_exacta = np.linalg.solve(A, b)
 
-# Error relativo
-def error_relativo(x_new, x_old):
-    return abs((x_new - x_old) / x_new)
 
-# Error cuadrático
-def error_cuadratico(x_new, x_old):
-    return (x_new - x_old)**2
+# Criterio de paro
+tolerancia = 1e-6
+max_iter = 100
 
-# Método de punto fijo
-def punto_fijo(x0, tol=1e-5, max_iter=100):
-    iteraciones = []
+# Implementación del método de Jacobi
+def jacobi(A, b, tol, max_iter):
+    n = len(A)
+    x = np.zeros(n)  # Aproximación inicial
     errores_abs = []
     errores_rel = []
     errores_cuad = []
 
-    x_old = x0
-    for i in range(max_iter):
-        x_new = g(x_old)
-        e_abs = error_absoluto(x_new, x_old)
-        e_rel = error_relativo(x_new, x_old)
-        e_cuad = error_cuadratico(x_new, x_old)
+    for k in range(max_iter):
+        x_new = np.zeros(n)
+        for i in range(n):
+            suma = sum(A[i, j] * x[j] for j in range(n) if j != i)
+            x_new[i] = (b[i] - suma) / A[i, i]
 
-        iteraciones.append((i+1, x_new, e_abs, e_rel, e_cuad))
-        errores_abs.append(e_abs)
-        errores_rel.append(e_rel)
-        errores_cuad.append(e_cuad)
+        # Calcular errores
+        error_abs = np.linalg.norm(x_new - sol_exacta, ord=1)
+        error_rel = np.linalg.norm(x_new - sol_exacta, ord=1) / np.linalg.norm(sol_exacta, ord=1)
+        error_cuad = np.linalg.norm(x_new - sol_exacta, ord=2)
 
-        if e_abs < tol:
+        errores_abs.append(error_abs)
+        errores_rel.append(error_rel)
+        errores_cuad.append(error_cuad)
+
+        # Imprimir errores de la iteración
+        print(f"Iteración {k+1}: Error absoluto = {error_abs:.6f}, Error relativo = {error_rel:.6f}, Error cuadrático = {error_cuad:.6f}")
+
+        # Criterio de convergencia
+        if np.linalg.norm(x_new - x, ord=np.inf) < tol:
             break
 
-        x_old = x_new
+        x = x_new
 
-    return iteraciones, errores_abs, errores_rel, errores_cuad
+    return x, errores_abs, errores_rel, errores_cuad, k+1
 
-# Parámetros iniciales
-x0 = 1.0
-iteraciones, errores_abs, errores_rel, errores_cuad = punto_fijo(x0)
+# Ejecutar el método de Jacobi
+sol_aprox, errores_abs, errores_rel, errores_cuad, iteraciones = jacobi(A, b, tolerancia, max_iter)
 
-# Imprimir tabla de iteraciones
-print("Iteración | x_n      | Error absoluto | Error relativo | Error cuadrático")
-print("-----------------------------------------------------------------------")
-for it in iteraciones:
-    print(f"{it[0]:9d} | {it[1]:.6f} | {it[2]:.6e} | {it[3]:.6e} | {it[4]:.6e}")
-
-# Graficar la convergencia
-x_vals = np.linspace(1, 3, 100)
-y_vals = g(x_vals)
-
-plt.figure(figsize=(8, 5))
-plt.plot(x_vals, y_vals, label=r"$g(x) = In(4x)$", color="blue")
-plt.plot(x_vals, x_vals, linestyle="dashed", color="red", label="y = x")
-
-# Graficar iteraciones
-x_points = [it[1] for it in iteraciones]
-y_points = [g(x) for x in x_points]
-plt.scatter(x_points, y_points, color="black", zorder=3)
-plt.plot(x_points, y_points, linestyle="dotted", color="black", label="Iteraciones")
-
-plt.xlabel("x")
-plt.ylabel("g(x)")
-plt.legend()
-plt.grid(True)
-plt.title("Método de Punto Fijo")
-plt.savefig("punto_fijo_convergencia.png")
-plt.show()
-
-# Graficar errores
-plt.figure(figsize=(8, 5))
-plt.plot(range(1, len(errores_abs) + 1), errores_abs, marker="o", label="Error absoluto")
-plt.plot(range(1, len(errores_rel) + 1), errores_rel, marker="s", label="Error relativo")
-plt.plot(range(1, len(errores_cuad) + 1), errores_cuad, marker="^", label="Error cuadrático")
-
-plt.xlabel("Iteración")
+# Graficar los errores
+plt.figure(figsize=(8,6))
+plt.plot(range(1, iteraciones+1), errores_abs, label="Error absoluto", marker='o')
+plt.plot(range(1, iteraciones+1), errores_rel, label="Error relativo", marker='s')
+plt.plot(range(1, iteraciones+1), errores_cuad, label="Error cuadrático", marker='d')
+plt.xlabel("Iteraciones")
 plt.ylabel("Error")
 plt.yscale("log")
+plt.title("Convergencia de los errores en el método de Jacobi")
 plt.legend()
-plt.grid(True)
-plt.title("Evolución de los Errores")
-plt.savefig("errores_punto_fijo.png")
+plt.grid()
+plt.savefig("errores_jacobi.png")  # Guardar la figura en archivo PNG
 plt.show()
+
+# Mostrar la solución aproximada
+print(f"Solución aproximada: {sol_aprox}")
+print(f"Solución exacta: {sol_exacta}")
 
 """**Ejercicio 3**"""
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Definir la función g(x) para el método de punto fijo
-def g(x):
-    return np.cos(x)
+# Definir el sistema de ecuaciones del ejemplo
+A = np.array([[12, -2, 1, 0, 0, 0, 0],
+              [-3, 18, -4, 2, 0, 0, 0],
+              [1, -2, 16, -1, 1, 0, 0],
+              [0, 2, -1, 11, -3, 1, 0],
+              [0, 0, -2, 4, 15, -2, 1],
+              [0, 0, 0, 1, -3, 2, 13]])
 
-# Criterio de convergencia
-def g_prime(x):
-    return np.sin(x)
+b = np.array([20, 35, -5, 19, -12, 25])
 
-# Error absoluto
-def error_absoluto(x_new, x_old):
-    return abs(x_new - x_old)
+# Solución exacta para comparar errores
+# Se añade esta linea para determinar
+# una solución exacta para comparar errores
+#sol_exacta = np.linalg.solve(A, b)
 
-# Error relativo
-def error_relativo(x_new, x_old):
-    return abs((x_new - x_old) / x_new)
 
-# Error cuadrático
-def error_cuadratico(x_new, x_old):
-    return (x_new - x_old)**2
+# Criterio de paro
+tolerancia = 1e-6
+max_iter = 100
 
-# Método de punto fijo
-def punto_fijo(x0, tol=1e-5, max_iter=100):
-    iteraciones = []
+# Implementación del método de Jacobi
+def jacobi(A, b, tol, max_iter):
+    n = len(A)
+    x = np.zeros(n)  # Aproximación inicial
     errores_abs = []
     errores_rel = []
     errores_cuad = []
 
-    x_old = x0
-    for i in range(max_iter):
-        x_new = g(x_old)
-        e_abs = error_absoluto(x_new, x_old)
-        e_rel = error_relativo(x_new, x_old)
-        e_cuad = error_cuadratico(x_new, x_old)
+    for k in range(max_iter):
+        x_new = np.zeros(n)
+        for i in range(n):
+            suma = sum(A[i, j] * x[j] for j in range(n) if j != i)
+            x_new[i] = (b[i] - suma) / A[i, i]
 
-        iteraciones.append((i+1, x_new, e_abs, e_rel, e_cuad))
-        errores_abs.append(e_abs)
-        errores_rel.append(e_rel)
-        errores_cuad.append(e_cuad)
+        # Calcular errores
+        error_abs = np.linalg.norm(x_new - sol_exacta, ord=1)
+        error_rel = np.linalg.norm(x_new - sol_exacta, ord=1) / np.linalg.norm(sol_exacta, ord=1)
+        error_cuad = np.linalg.norm(x_new - sol_exacta, ord=2)
 
-        if e_abs < tol:
+        errores_abs.append(error_abs)
+        errores_rel.append(error_rel)
+        errores_cuad.append(error_cuad)
+
+        # Imprimir errores de la iteración
+        print(f"Iteración {k+1}: Error absoluto = {error_abs:.6f}, Error relativo = {error_rel:.6f}, Error cuadrático = {error_cuad:.6f}")
+
+        # Criterio de convergencia
+        if np.linalg.norm(x_new - x, ord=np.inf) < tol:
             break
 
-        x_old = x_new
+        x = x_new
 
-    return iteraciones, errores_abs, errores_rel, errores_cuad
+    return x, errores_abs, errores_rel, errores_cuad, k+1
 
-# Parámetros iniciales
-x0 = 0.5
-iteraciones, errores_abs, errores_rel, errores_cuad = punto_fijo(x0)
+# Ejecutar el método de Jacobi
+sol_aprox, errores_abs, errores_rel, errores_cuad, iteraciones = jacobi(A, b, tolerancia, max_iter)
 
-# Imprimir tabla de iteraciones
-print("Iteración | x_n      | Error absoluto | Error relativo | Error cuadrático")
-print("-----------------------------------------------------------------------")
-for it in iteraciones:
-    print(f"{it[0]:9d} | {it[1]:.6f} | {it[2]:.6e} | {it[3]:.6e} | {it[4]:.6e}")
-
-# Graficar la convergencia
-x_vals = np.linspace(-5, 5, 100)
-y_vals = g(x_vals)
-
-plt.figure(figsize=(8, 5))
-plt.plot(x_vals, y_vals, label=r"$g(x) = Cos(x)$", color="blue")
-plt.plot(x_vals, x_vals, linestyle="dashed", color="red", label="y = x")
-
-# Graficar iteraciones
-x_points = [it[1] for it in iteraciones]
-y_points = [g(x) for x in x_points]
-plt.scatter(x_points, y_points, color="black", zorder=3)
-plt.plot(x_points, y_points, linestyle="dotted", color="black", label="Iteraciones")
-
-plt.xlabel("x")
-plt.ylabel("g(x)")
-plt.legend()
-plt.grid(True)
-plt.title("Método de Punto Fijo")
-plt.savefig("punto_fijo_convergencia.png")
-plt.show()
-
-# Graficar errores
-plt.figure(figsize=(8, 5))
-plt.plot(range(1, len(errores_abs) + 1), errores_abs, marker="o", label="Error absoluto")
-plt.plot(range(1, len(errores_rel) + 1), errores_rel, marker="s", label="Error relativo")
-plt.plot(range(1, len(errores_cuad) + 1), errores_cuad, marker="^", label="Error cuadrático")
-
-plt.xlabel("Iteración")
+# Graficar los errores
+plt.figure(figsize=(8,6))
+plt.plot(range(1, iteraciones+1), errores_abs, label="Error absoluto", marker='o')
+plt.plot(range(1, iteraciones+1), errores_rel, label="Error relativo", marker='s')
+plt.plot(range(1, iteraciones+1), errores_cuad, label="Error cuadrático", marker='d')
+plt.xlabel("Iteraciones")
 plt.ylabel("Error")
 plt.yscale("log")
+plt.title("Convergencia de los errores en el método de Jacobi")
 plt.legend()
-plt.grid(True)
-plt.title("Evolución de los Errores")
-plt.savefig("errores_punto_fijo.png")
+plt.grid()
+plt.savefig("errores_jacobi.png")  # Guardar la figura en archivo PNG
 plt.show()
+
+# Mostrar la solución aproximada
+print(f"Solución aproximada: {sol_aprox}")
+print(f"Solución exacta: {sol_exacta}")
